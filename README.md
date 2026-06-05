@@ -2,7 +2,7 @@
 
 GOAT stands for **Greatest Observational Astroprocessing Tool**.
 
-Color-image composition tools for astronomical observations.
+It's not the greatest code. Personally I use Photoshop and Pixinsight to process data. It's just a catchy name.
 
 ## Example usage
 
