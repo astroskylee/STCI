@@ -5,6 +5,12 @@ STSCImage stands for **Space Telescope Science Color Image**.
 STSCImage is a small astronomy image-composition tool for making display-ready
 color JPEGs from space telescope cutouts and other aligned mono images.
 
+## Installation
+
+```bash
+pip install STSCImage
+```
+
 ## Example usage
 
 `mk_colorimg` creates one color JPEG from either a 3-channel RGB array or three mono images in `(R, G, B)` order. For Euclid-style color images, the default mapping is `NIR_J`, `NIR_Y`, `VIS`.

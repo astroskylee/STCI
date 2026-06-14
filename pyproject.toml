@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "STSCImage"
+version = "0.1.0"
+description = "Space Telescope Science Color Image tools for astronomy cutouts."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Tian Li" }
+]
+keywords = ["astronomy", "euclid", "fits", "image-processing", "color-image"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Astronomy",
+]
+dependencies = [
+    "astropy",
+    "astroquery",
+    "numpy",
+    "pillow",
+    "tifffile",
+]
+
+[project.urls]
+Homepage = "https://github.com/astroskylee/STSCImage"
+Repository = "https://github.com/astroskylee/STSCImage"
+
+[tool.setuptools]
+py-modules = ["STSCImage", "Tian_color", "Download_Euclid"]
