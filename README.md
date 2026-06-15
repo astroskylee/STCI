@@ -1,6 +1,6 @@
-# STSCImage
+# STimage
 
-STSCImage stands for **Space Telescope Science Color Image**.
+STimage is the PyPI project for **STSCImage**, which stands for **Space Telescope Science Color Image**.
 
 STSCImage is a small astronomy image-composition tool for making display-ready
 color JPEGs from space telescope cutouts and other aligned mono images.
@@ -8,8 +8,10 @@ color JPEGs from space telescope cutouts and other aligned mono images.
 ## Installation
 
 ```bash
-pip install STSCImage
+pip install STimage
 ```
+
+The installed Python import module is still `STSCImage`.
 
 ## Example usage
 
