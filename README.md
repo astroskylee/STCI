@@ -1,24 +1,24 @@
-# STimage
+# STCI
 
-STimage is the PyPI project for **STSCImage**, which stands for **Space Telescope Science Color Image**.
+STCI stands for **SpaceTelescopeColorImage**.
 
-STSCImage is a small astronomy image-composition tool for making display-ready
+STCI is a small astronomy image-composition tool for making display-ready
 color JPEGs from space telescope cutouts and other aligned mono images.
 
 ## Installation
 
 ```bash
-pip install STimage
+pip install STCI
 ```
 
-The installed Python import module is still `STSCImage`.
+The installed Python import module is `STCI`.
 
 ## Example usage
 
 `mk_colorimg` creates one color JPEG from either a 3-channel RGB array or three mono images in `(R, G, B)` order. For Euclid-style color images, the default mapping is `NIR_J`, `NIR_Y`, `VIS`.
 
 ```python
-from STSCImage import mk_colorimg
+from STCI import mk_colorimg
 
 mk_colorimg(
     [
@@ -34,7 +34,7 @@ mk_colorimg(
 For a NumPy RGB cube:
 
 ```python
-from STSCImage import mk_colorimg
+from STCI import mk_colorimg
 
 mk_colorimg(rgb_array, output_jpg="target_color.jpg", input_mode="normalized")
 ```
@@ -44,7 +44,7 @@ mk_colorimg(rgb_array, output_jpg="target_color.jpg", input_mode="normalized")
 `Euclidimg` downloads Euclid DR1 `VIS`, `NIR_Y`, `NIR_J`, and `NIR_H` FITS cutouts, then renders one color JPEG using the `NIR_J / NIR_Y / VIS` channel order.
 
 ```python
-from STSCImage import Euclidimg
+from STCI import Euclidimg
 
 result = Euclidimg(
     ra=50.7163333,

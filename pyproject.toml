@@ -3,9 +3,9 @@ requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "STimage"
+name = "STCI"
 version = "0.1.0"
-description = "Space Telescope Science Color Image tools for astronomy cutouts."
+description = "SpaceTelescopeColorImage tools for astronomy cutouts."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
@@ -32,8 +32,8 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/astroskylee/STSCImage"
-Repository = "https://github.com/astroskylee/STSCImage"
+Homepage = "https://github.com/astroskylee/STCI"
+Repository = "https://github.com/astroskylee/STCI"
 
 [tool.setuptools]
-py-modules = ["STSCImage", "Tian_color", "Download_Euclid"]
+py-modules = ["STCI", "Tian_color", "Download_Euclid"]
