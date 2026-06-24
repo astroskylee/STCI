@@ -259,6 +259,23 @@ def normalize_raw_channels_common(
     return red_lin, green_lin, blue_lin, float(scale)
 
 
+def normalize_raw_channel(channel: np.ndarray) -> tuple[np.ndarray, float]:
+    """
+    Apply the RGB workflow's raw linear normalization to one mono band.
+
+    Negative sky fluctuations are preserved and only the high end is clipped.
+    The nonlinear display stretch is handled later by the STF/HT step.
+    """
+
+    peak = float(np.nanmax(channel))
+    if not np.isfinite(peak) or peak <= 0:
+        return np.zeros_like(channel, dtype=np.float32), 1.0
+
+    scale = 1.0 / peak
+    channel_lin = np.minimum(channel.astype(np.float32) * scale, 1.0)
+    return channel_lin, float(scale)
+
+
 def _asinh_channel(channel: np.ndarray, q: float, clip: float = 99.85) -> np.ndarray:
     """
     Stretch one normalized channel with an asinh mapping and rescale to [0, 1].
@@ -892,6 +909,21 @@ def linked_auto_stf_and_ht(rgb: np.ndarray, config: ComposeConfig) -> np.ndarray
     return histogram_transform(rgb, shadows=c0, highlights=1.0, midtones=m)
 
 
+def mono_auto_stf_and_ht(channel: np.ndarray, config: ComposeConfig) -> np.ndarray:
+    """
+    Apply the same STF-to-HT display stretch to one mono channel.
+
+    This is the single-band version of `linked_auto_stf_and_ht`: it keeps the
+    existing MTF stretch behavior but omits RGB-only color balancing.
+    """
+
+    med = float(np.median(channel))
+    mad = madn(channel)
+    c0 = float(np.clip(med + config.shadows_clipping * mad, 0.0, 1.0))
+    m = inverse_mtf(config.target_background, med - c0)
+    return histogram_transform(channel, shadows=c0, highlights=1.0, midtones=m)
+
+
 def apply_post_auto_ht_darkening(rgb: np.ndarray, config: ComposeConfig) -> np.ndarray:
     """
     Apply the second HT dimming pass after the main auto stretch.
@@ -1424,6 +1456,34 @@ def compose_pipeline(red: np.ndarray, green: np.ndarray, blue: np.ndarray, confi
     }
 
 
+def compose_mono_pipeline(channel: np.ndarray, config: ComposeConfig | None = None) -> dict[str, np.ndarray]:
+    """
+    Run the mono MTF processing path and return named outputs.
+
+    This mirrors the non-color part of `compose_pipeline`:
+    one normalized channel -> STF/HT stretch -> post-HT dimming -> final mono
+    image. RGB-only steps such as BN/CC, Lab luminance replacement, SCNR, and
+    saturation are intentionally omitted.
+    """
+
+    if config is None:
+        config = ComposeConfig()
+
+    mono = np.asarray(channel, dtype=np.float32)
+    if mono.ndim != 2:
+        raise ValueError(f"Expected a 2D mono image, got shape {mono.shape}")
+
+    stfht = mono_auto_stf_and_ht(mono, config)
+    htdim = apply_post_auto_ht_darkening(stfht, config)
+    final = np.clip(htdim, 0.0, 1.0)
+    return {
+        "01_mono.tif": mono,
+        "02_stfht.tif": stfht,
+        "03_htdim.tif": htdim,
+        "13_final.tif": final,
+    }
+
+
 def compose_asinh_pipeline(
     red: np.ndarray,
     green: np.ndarray,
@@ -1503,6 +1563,40 @@ class TianColorMaker:
         outputs = compose_pipeline(red_work, green_work, blue_work, config=self.config)
         output_path = Path(output_jpg).expanduser().resolve()
         save_jpeg(output_path, outputs["13_final.tif"], quality=jpeg_quality)
+        return output_path
+
+
+class TianMonoMaker:
+    """
+    Convenience wrapper for one-band MTF display images.
+
+    Supported inputs are one 2D NumPy array, one mono FITS file, or one
+    single-channel raster. Only the final grayscale JPEG is written.
+    """
+
+    def __init__(self, config: ComposeConfig | None = None):
+        self.config = config or ComposeConfig()
+
+    def render(
+        self,
+        mono_image: np.ndarray | str | Path,
+        output_jpg: str | Path = "mtf_mono.jpg",
+        *,
+        input_mode: str = "auto",
+        jpeg_quality: int = 100,
+    ) -> Path:
+        mono = _load_single_channel(mono_image)
+        mode = _resolve_mono_input_mode(mono, input_mode)
+
+        if mode == "raw":
+            mono_work, _ = normalize_raw_channel(mono)
+        else:
+            mono_work = np.clip(np.asarray(mono, dtype=np.float32), 0.0, 1.0)
+
+        outputs = compose_mono_pipeline(mono_work, config=self.config)
+        final_rgb = np.repeat(outputs["13_final.tif"][..., None], 3, axis=-1)
+        output_path = Path(output_jpg).expanduser().resolve()
+        save_jpeg(output_path, final_rgb, quality=jpeg_quality)
         return output_path
 
 
@@ -1614,6 +1708,24 @@ def _resolve_input_mode(red: np.ndarray, green: np.ndarray, blue: np.ndarray, in
     return "normalized"
 
 
+def _resolve_mono_input_mode(channel: np.ndarray, input_mode: str) -> str:
+    """
+    Decide whether one mono channel is raw science data or already normalized.
+    """
+
+    if input_mode not in {"auto", "raw", "normalized"}:
+        raise ValueError("input_mode must be one of: 'auto', 'raw', 'normalized'")
+
+    if input_mode != "auto":
+        return input_mode
+
+    peak = float(np.nanmax(channel))
+    floor = float(np.nanmin(channel))
+    if floor < 0.0 or peak > 1.0:
+        return "raw"
+    return "normalized"
+
+
 def mk_colorimg(
     rgb_image: np.ndarray | str | Path | list[np.ndarray | str | Path] | tuple[np.ndarray | str | Path, ...],
     output_jpg: str | Path = "mtf_color.jpg",
@@ -1644,6 +1756,42 @@ def mk_colorimg(
     maker = TianColorMaker(config=config)
     return maker.render(
         rgb_image,
+        output_jpg=output_jpg,
+        input_mode=input_mode,
+        jpeg_quality=jpeg_quality,
+    )
+
+
+def mk_monoimg(
+    mono_image: np.ndarray | str | Path,
+    output_jpg: str | Path = "mtf_mono.jpg",
+    *,
+    input_mode: str = "auto",
+    config: ComposeConfig | None = None,
+    jpeg_quality: int = 100,
+) -> Path:
+    """
+    Public convenience function for building one MTF grayscale JPEG.
+
+    Parameters
+    ----------
+    mono_image
+        One mono channel as a 2D array, FITS file, or single-channel raster.
+    output_jpg
+        Path of the final JPEG to write.
+    input_mode
+        - `"raw"`: apply linear normalization before the mono MTF workflow
+        - `"normalized"`: assume input is already in display-space `[0, 1]`
+        - `"auto"`: treat data outside `[0, 1]` as raw
+    config
+        Optional `ComposeConfig`; color-only fields are ignored by this path.
+    jpeg_quality
+        JPEG export quality. Defaults to `100`.
+    """
+
+    maker = TianMonoMaker(config=config)
+    return maker.render(
+        mono_image,
         output_jpg=output_jpg,
         input_mode=input_mode,
         jpeg_quality=jpeg_quality,

@@ -39,6 +39,28 @@ from STCI import mk_colorimg
 mk_colorimg(rgb_array, output_jpg="target_color.jpg", input_mode="normalized")
 ```
 
+## Single-Band MTF Image
+
+`mk_monoimg` creates one grayscale JPEG from a single mono image. It uses the same MTF-style stretch as `mk_colorimg`, but omits RGB-only steps such as color calibration, Lab luminance replacement, SCNR, and saturation.
+
+```python
+from STCI import mk_monoimg
+
+mk_monoimg(
+    "cutout_VIS.fits",
+    output_jpg="target_vis_mtf.jpg",
+    input_mode="raw",
+)
+```
+
+For a NumPy mono image:
+
+```python
+from STCI import mk_monoimg
+
+mk_monoimg(mono_array, output_jpg="target_mono.jpg", input_mode="normalized")
+```
+
 ## Download a Euclid Color Image
 
 `Euclidimg` downloads Euclid DR1 `VIS`, `NIR_Y`, `NIR_J`, and `NIR_H` FITS cutouts, then renders one color JPEG using the `NIR_J / NIR_Y / VIS` channel order.
